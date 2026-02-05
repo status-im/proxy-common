@@ -48,7 +48,6 @@ func WithTestMode(enable bool) Option {
 
 func WithCustomMetrics(m metrics.MetricsRecorder) Option {
 	return func(s *Server) {
-		// This will be applied when creating handlers
 		if s.handlers == nil {
 			s.handlers = handlers.New(s.config, handlers.WithMetrics(m))
 		}
@@ -66,7 +65,6 @@ func New(opts ...Option) (*Server, error) {
 		opt(s)
 	}
 
-	// If no config was provided, try to load from default sources
 	if s.config == nil {
 		cfg, err := config.Load()
 		if err != nil {

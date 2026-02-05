@@ -33,7 +33,6 @@ func main() {
 		{Difficulty: 1, Argon2Config: puzzle.Argon2Config{MemoryKB: 16, Time: 4, Threads: 4, KeyLen: 32}},
 		{Difficulty: 2, Argon2Config: puzzle.Argon2Config{MemoryKB: 16, Time: 4, Threads: 4, KeyLen: 32}},
 		{Difficulty: 3, Argon2Config: puzzle.Argon2Config{MemoryKB: 16, Time: 4, Threads: 4, KeyLen: 32}},
-		// difficulty 1, 2, 3 with Memory=64KB
 		{Difficulty: 1, Argon2Config: puzzle.Argon2Config{MemoryKB: 64, Time: 4, Threads: 4, KeyLen: 32}},
 		{Difficulty: 2, Argon2Config: puzzle.Argon2Config{MemoryKB: 64, Time: 4, Threads: 4, KeyLen: 32}},
 		{Difficulty: 3, Argon2Config: puzzle.Argon2Config{MemoryKB: 64, Time: 4, Threads: 4, KeyLen: 32}},
@@ -79,14 +78,12 @@ func runBenchmark(params BenchmarkParams, iterations int) BenchmarkResult {
 	jwtSecret := "test-secret-key-for-benchmarking"
 
 	for i := 0; i < iterations; i++ {
-		// Generate a new puzzle
 		p, err := puzzle.Generate(params.Difficulty, 5, jwtSecret)
 		if err != nil {
 			fmt.Printf("Error generating puzzle: %v\n", err)
 			continue
 		}
 
-		// Measure solve time
 		startTime := time.Now()
 		_, err = puzzle.Solve(p, params.Argon2Config)
 		duration := time.Since(startTime)
@@ -99,7 +96,6 @@ func runBenchmark(params BenchmarkParams, iterations int) BenchmarkResult {
 		durations = append(durations, duration)
 	}
 
-	// Calculate statistics
 	median := calculateMedian(durations)
 	p90 := calculatePercentile(durations, 90)
 

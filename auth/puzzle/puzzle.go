@@ -86,7 +86,6 @@ func Solve(puzzle *Puzzle, argon2Config Argon2Config) (*Solution, error) {
 		return nil, fmt.Errorf("puzzle has expired")
 	}
 
-	// Try different nonces until we find one that meets difficulty
 	for nonce := uint64(0); nonce < 1000000; nonce++ {
 		argonHash := computeArgon2HashWithConfig(puzzle.Challenge, puzzle.Salt, nonce, puzzle.Difficulty, argon2Config)
 
@@ -112,11 +111,9 @@ func computeArgon2HashWithConfig(challenge, salt string, nonce uint64, difficult
 
 	saltBytes, err := hex.DecodeString(salt)
 	if err != nil {
-		// Fallback to using salt as-is if decode fails
 		saltBytes = []byte(salt)
 	}
 
-	// Use config parameters directly without difficulty adjustment
 	memory := uint32(argon2Config.MemoryKB)
 	time := uint32(argon2Config.Time)
 	threads := uint8(argon2Config.Threads)

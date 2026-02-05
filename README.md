@@ -1,5 +1,7 @@
 # Go Auth Service
 
+[![Tests](https://github.com/status-im/proxy-common/actions/workflows/test.yml/badge.svg)](https://github.com/status-im/proxy-common/actions/workflows/test.yml)
+
 Proof-of-work authentication service that protects RPC endpoints from DDoS attacks using Argon2-based puzzles.
 
 ## Quick Start
