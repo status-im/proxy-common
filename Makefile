@@ -1,4 +1,4 @@
-.PHONY: help test build clean tidy server
+.PHONY: help test build clean tidy server docker-build docker-push
 
 help: ## Show this help message
 	@awk 'BEGIN {FS = ":.*?## "} /^[a-zA-Z_-]+:.*?## / {printf "  %-12s %s\n", $$1, $$2}' $(MAKEFILE_LIST)
@@ -20,5 +20,11 @@ tidy: ## Tidy and format code
 
 server: build ## Run auth server
 	CONFIG_FILE=auth/auth_config.json ./bin/auth-server
+
+docker-build: ## Build Docker image locally
+	docker build -f auth/Dockerfile -t ghcr.io/status-im/proxy-common/auth:latest .
+
+docker-push: docker-build ## Build and push Docker image to GHCR
+	docker push ghcr.io/status-im/proxy-common/auth:latest
 
 .DEFAULT_GOAL := help
