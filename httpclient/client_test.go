@@ -46,9 +46,10 @@ func TestHTTPClientWithRetries_Timeouts(t *testing.T) {
 	// Create a test server that sleeps to simulate slow responses
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		delay := r.URL.Query().Get("delay")
-		if delay == "connection" {
+		switch delay {
+		case "connection":
 			time.Sleep(500 * time.Millisecond)
-		} else if delay == "response" {
+		case "response":
 			time.Sleep(500 * time.Millisecond)
 		}
 

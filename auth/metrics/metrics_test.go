@@ -128,7 +128,7 @@ func TestNewPrometheusMetrics(t *testing.T) {
 }
 
 func TestNoopMetricsInterface(t *testing.T) {
-	var m MetricsRecorder = NewNoopMetrics()
+	var m = NewNoopMetrics()
 
 	// Should not panic
 	m.RecordPuzzleAttempt("success")

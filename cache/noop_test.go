@@ -237,9 +237,7 @@ func TestNoopMetrics(t *testing.T) {
 func TestNoopImplementsInterfaces(t *testing.T) {
 	t.Run("NoopLogger implements Logger interface", func(t *testing.T) {
 		var logger Logger = NoopLogger{}
-		if logger == nil {
-			t.Error("NoopLogger does not implement Logger interface")
-		}
+		// Interface compliance proven by successful assignment above
 
 		// Test that it can be used as Logger
 		logger.Debug("test")
@@ -250,9 +248,7 @@ func TestNoopImplementsInterfaces(t *testing.T) {
 
 	t.Run("NoopMetrics implements MetricsRecorder interface", func(t *testing.T) {
 		var metrics MetricsRecorder = NoopMetrics{}
-		if metrics == nil {
-			t.Error("NoopMetrics does not implement MetricsRecorder interface")
-		}
+		// Interface compliance proven by successful assignment above
 
 		// Test that it can be used as MetricsRecorder
 		metrics.RecordCacheError("l1", "test")

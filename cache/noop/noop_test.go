@@ -4,15 +4,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/status-im/proxy-common/cache"
 	"github.com/status-im/proxy-common/models"
 )
 
 func TestNewNoOpCache(t *testing.T) {
 	c := NewNoOpCache()
-
-	// Verify it implements the Cache interface
-	var _ cache.Cache = c
 
 	// Verify it returns a NoOpCache instance
 	if _, ok := c.(*NoOpCache); !ok {
