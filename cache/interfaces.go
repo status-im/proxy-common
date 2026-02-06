@@ -49,6 +49,11 @@ type MetricsRecorder interface {
 	RecordCacheError(level, kind string)
 	UpdateL1CacheCapacity(capacity, used int64)
 	UpdateCacheKeys(level string, count int64)
+	RecordCacheHit(cacheType, level, chain, network, rpcMethod string, itemAge time.Duration)
+	RecordCacheMiss(cacheType, chain, network, rpcMethod string)
+	RecordCacheSet(level, cacheType, chain, network string, dataSize int)
+	RecordCacheBytesRead(level, cacheType, chain, network string, bytesRead int)
+	TimeCacheOperation(operation, level string) func()
 }
 
 // NoopLogger is a no-operation logger that discards all log messages
@@ -65,3 +70,9 @@ type NoopMetrics struct{}
 func (NoopMetrics) RecordCacheError(level, kind string)        {}
 func (NoopMetrics) UpdateL1CacheCapacity(capacity, used int64) {}
 func (NoopMetrics) UpdateCacheKeys(level string, count int64)  {}
+func (NoopMetrics) RecordCacheHit(cacheType, level, chain, network, rpcMethod string, itemAge time.Duration) {
+}
+func (NoopMetrics) RecordCacheMiss(cacheType, chain, network, rpcMethod string)                 {}
+func (NoopMetrics) RecordCacheSet(level, cacheType, chain, network string, dataSize int)        {}
+func (NoopMetrics) RecordCacheBytesRead(level, cacheType, chain, network string, bytesRead int) {}
+func (NoopMetrics) TimeCacheOperation(operation, level string) func()                           { return func() {} }
