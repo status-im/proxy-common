@@ -95,14 +95,14 @@ func (c *HTTPClientWithRetries) ExecuteRequest(req *http.Request) (*http.Respons
 		if err != nil {
 			if isRetryableError(resp.StatusCode) {
 				lastErr = err
-				resp.Body.Close()
+				_ = resp.Body.Close()
 				if c.StatusHandler != nil {
 					c.StatusHandler.OnRequest("rate_limited")
 				}
 				continue
 			}
 
-			resp.Body.Close()
+			_ = resp.Body.Close()
 			if c.StatusHandler != nil {
 				c.StatusHandler.OnRequest("error")
 			}

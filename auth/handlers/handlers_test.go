@@ -256,7 +256,9 @@ func TestVerifyHandler(t *testing.T) {
 	h.SolveHandler(w, req)
 
 	var solveResp map[string]interface{}
-	json.NewDecoder(w.Body).Decode(&solveResp)
+	if err := json.NewDecoder(w.Body).Decode(&solveResp); err != nil {
+		t.Fatalf("failed to decode response: %v", err)
+	}
 	token := solveResp["token"].(string)
 
 	// Test with Bearer token
@@ -325,7 +327,9 @@ func TestVerifyHandlerRateLimiting(t *testing.T) {
 	h.PuzzleHandler(puzzleW, puzzleReq)
 
 	var puzzleResp map[string]interface{}
-	json.NewDecoder(puzzleW.Body).Decode(&puzzleResp)
+	if err := json.NewDecoder(puzzleW.Body).Decode(&puzzleResp); err != nil {
+		t.Fatalf("failed to decode response: %v", err)
+	}
 
 	p := &puzzle.Puzzle{
 		Challenge:  puzzleResp["challenge"].(string),
@@ -355,7 +359,9 @@ func TestVerifyHandlerRateLimiting(t *testing.T) {
 	h.SolveHandler(w, req)
 
 	var solveResp map[string]interface{}
-	json.NewDecoder(w.Body).Decode(&solveResp)
+	if err := json.NewDecoder(w.Body).Decode(&solveResp); err != nil {
+		t.Fatalf("failed to decode response: %v", err)
+	}
 	token := solveResp["token"].(string)
 
 	// Use token up to limit

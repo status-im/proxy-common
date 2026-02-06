@@ -165,23 +165,23 @@ func TestLoadFromEnv(t *testing.T) {
 	defer func() {
 		for key, val := range origVars {
 			if val == "" {
-				os.Unsetenv(key)
+				_ = os.Unsetenv(key)
 			} else {
-				os.Setenv(key, val)
+				_ = os.Setenv(key, val)
 			}
 		}
 	}()
 
 	// Set test env vars
-	os.Setenv("JWT_SECRET", "env-secret")
-	os.Setenv("ALGORITHM", "argon2id")
-	os.Setenv("PUZZLE_DIFFICULTY", "3")
-	os.Setenv("REQUESTS_PER_TOKEN", "150")
-	os.Setenv("TOKEN_EXPIRY_MINUTES", "30")
-	os.Setenv("ARGON2_MEMORY_KB", "4096")
-	os.Setenv("ARGON2_TIME", "2")
-	os.Setenv("ARGON2_THREADS", "1")
-	os.Setenv("ARGON2_KEY_LEN", "16")
+	_ = os.Setenv("JWT_SECRET", "env-secret")
+	_ = os.Setenv("ALGORITHM", "argon2id")
+	_ = os.Setenv("PUZZLE_DIFFICULTY", "3")
+	_ = os.Setenv("REQUESTS_PER_TOKEN", "150")
+	_ = os.Setenv("TOKEN_EXPIRY_MINUTES", "30")
+	_ = os.Setenv("ARGON2_MEMORY_KB", "4096")
+	_ = os.Setenv("ARGON2_TIME", "2")
+	_ = os.Setenv("ARGON2_THREADS", "1")
+	_ = os.Setenv("ARGON2_KEY_LEN", "16")
 
 	cfg, err := LoadFromEnv()
 	if err != nil {
@@ -221,13 +221,13 @@ func TestLoadFromEnvMissingSecret(t *testing.T) {
 	origSecret := os.Getenv("JWT_SECRET")
 	defer func() {
 		if origSecret == "" {
-			os.Unsetenv("JWT_SECRET")
+			_ = os.Unsetenv("JWT_SECRET")
 		} else {
-			os.Setenv("JWT_SECRET", origSecret)
+			_ = os.Setenv("JWT_SECRET", origSecret)
 		}
 	}()
 
-	os.Unsetenv("JWT_SECRET")
+	_ = os.Unsetenv("JWT_SECRET")
 
 	_, err := LoadFromEnv()
 	if err == nil {
