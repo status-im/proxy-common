@@ -23,6 +23,7 @@ import (
 type MockCache struct {
 	ctrl     *gomock.Controller
 	recorder *MockCacheMockRecorder
+	isgomock struct{}
 }
 
 // MockCacheMockRecorder is the mock recorder for MockCache.
@@ -100,6 +101,7 @@ func (mr *MockCacheMockRecorder) Set(key, val, ttl any) *gomock.Call {
 type MockLevelAwareCache struct {
 	ctrl     *gomock.Controller
 	recorder *MockLevelAwareCacheMockRecorder
+	isgomock struct{}
 }
 
 // MockLevelAwareCacheMockRecorder is the mock recorder for MockLevelAwareCache.
@@ -205,6 +207,7 @@ func (mr *MockLevelAwareCacheMockRecorder) Set(key, val, ttl any) *gomock.Call {
 type MockKeyDbClient struct {
 	ctrl     *gomock.Controller
 	recorder *MockKeyDbClientMockRecorder
+	isgomock struct{}
 }
 
 // MockKeyDbClientMockRecorder is the mock recorder for MockKeyDbClient.
@@ -303,6 +306,7 @@ func (mr *MockKeyDbClientMockRecorder) Set(ctx, key, value, expiration any) *gom
 type MockLogger struct {
 	ctrl     *gomock.Controller
 	recorder *MockLoggerMockRecorder
+	isgomock struct{}
 }
 
 // MockLoggerMockRecorder is the mock recorder for MockLogger.
@@ -394,6 +398,7 @@ func (mr *MockLoggerMockRecorder) Warn(msg any, keysAndValues ...any) *gomock.Ca
 type MockMetricsRecorder struct {
 	ctrl     *gomock.Controller
 	recorder *MockMetricsRecorderMockRecorder
+	isgomock struct{}
 }
 
 // MockMetricsRecorderMockRecorder is the mock recorder for MockMetricsRecorder.
@@ -413,6 +418,18 @@ func (m *MockMetricsRecorder) EXPECT() *MockMetricsRecorderMockRecorder {
 	return m.recorder
 }
 
+// RecordCacheBytesRead mocks base method.
+func (m *MockMetricsRecorder) RecordCacheBytesRead(level, cacheType, chain, network string, bytesRead int) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "RecordCacheBytesRead", level, cacheType, chain, network, bytesRead)
+}
+
+// RecordCacheBytesRead indicates an expected call of RecordCacheBytesRead.
+func (mr *MockMetricsRecorderMockRecorder) RecordCacheBytesRead(level, cacheType, chain, network, bytesRead any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RecordCacheBytesRead", reflect.TypeOf((*MockMetricsRecorder)(nil).RecordCacheBytesRead), level, cacheType, chain, network, bytesRead)
+}
+
 // RecordCacheError mocks base method.
 func (m *MockMetricsRecorder) RecordCacheError(level, kind string) {
 	m.ctrl.T.Helper()
@@ -423,6 +440,56 @@ func (m *MockMetricsRecorder) RecordCacheError(level, kind string) {
 func (mr *MockMetricsRecorderMockRecorder) RecordCacheError(level, kind any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RecordCacheError", reflect.TypeOf((*MockMetricsRecorder)(nil).RecordCacheError), level, kind)
+}
+
+// RecordCacheHit mocks base method.
+func (m *MockMetricsRecorder) RecordCacheHit(cacheType, level, chain, network, rpcMethod string, itemAge time.Duration) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "RecordCacheHit", cacheType, level, chain, network, rpcMethod, itemAge)
+}
+
+// RecordCacheHit indicates an expected call of RecordCacheHit.
+func (mr *MockMetricsRecorderMockRecorder) RecordCacheHit(cacheType, level, chain, network, rpcMethod, itemAge any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RecordCacheHit", reflect.TypeOf((*MockMetricsRecorder)(nil).RecordCacheHit), cacheType, level, chain, network, rpcMethod, itemAge)
+}
+
+// RecordCacheMiss mocks base method.
+func (m *MockMetricsRecorder) RecordCacheMiss(cacheType, chain, network, rpcMethod string) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "RecordCacheMiss", cacheType, chain, network, rpcMethod)
+}
+
+// RecordCacheMiss indicates an expected call of RecordCacheMiss.
+func (mr *MockMetricsRecorderMockRecorder) RecordCacheMiss(cacheType, chain, network, rpcMethod any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RecordCacheMiss", reflect.TypeOf((*MockMetricsRecorder)(nil).RecordCacheMiss), cacheType, chain, network, rpcMethod)
+}
+
+// RecordCacheSet mocks base method.
+func (m *MockMetricsRecorder) RecordCacheSet(level, cacheType, chain, network string, dataSize int) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "RecordCacheSet", level, cacheType, chain, network, dataSize)
+}
+
+// RecordCacheSet indicates an expected call of RecordCacheSet.
+func (mr *MockMetricsRecorderMockRecorder) RecordCacheSet(level, cacheType, chain, network, dataSize any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RecordCacheSet", reflect.TypeOf((*MockMetricsRecorder)(nil).RecordCacheSet), level, cacheType, chain, network, dataSize)
+}
+
+// TimeCacheOperation mocks base method.
+func (m *MockMetricsRecorder) TimeCacheOperation(operation, level string) func() {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "TimeCacheOperation", operation, level)
+	ret0, _ := ret[0].(func())
+	return ret0
+}
+
+// TimeCacheOperation indicates an expected call of TimeCacheOperation.
+func (mr *MockMetricsRecorderMockRecorder) TimeCacheOperation(operation, level any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "TimeCacheOperation", reflect.TypeOf((*MockMetricsRecorder)(nil).TimeCacheOperation), operation, level)
 }
 
 // UpdateCacheKeys mocks base method.
