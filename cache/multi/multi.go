@@ -97,7 +97,6 @@ func (mc *MultiCache) GetWithLevel(key string) *models.CacheResult {
 	for i, c := range mc.caches {
 		entry, found := c.Get(key)
 		if found {
-			// If found in a later cache (i > 0) and propagation is enabled, propagate to earlier caches
 			if i > 0 && mc.enablePropagation {
 				mc.propagateToEarlierCaches(key, entry, i)
 			}
@@ -132,7 +131,6 @@ func (mc *MultiCache) GetStaleWithLevel(key string) *models.CacheResult {
 	for i, c := range mc.caches {
 		entry, found := c.GetStale(key)
 		if found {
-			// If found in a later cache (i > 0) and propagation is enabled, propagate to earlier caches
 			if i > 0 && mc.enablePropagation {
 				mc.propagateToEarlierCaches(key, entry, i)
 			}

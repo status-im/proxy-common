@@ -65,7 +65,6 @@ func (c *HTTPClientWithRetries) ExecuteRequest(req *http.Request) (*http.Respons
 
 		requestStart := time.Now()
 
-		// Rate limit before executing the request
 		if c.RateLimiter != nil {
 			limiter := c.RateLimiter(req)
 			if limiter != nil {
@@ -79,7 +78,6 @@ func (c *HTTPClientWithRetries) ExecuteRequest(req *http.Request) (*http.Respons
 			}
 		}
 
-		// Execute request
 		resp, err := c.Client.Do(req)
 		requestDuration := time.Since(requestStart)
 
