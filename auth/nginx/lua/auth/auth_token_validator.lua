@@ -4,18 +4,16 @@ local jwt_claims = require("auth.jwt_claims")
 local token_limit = require("auth.token_limit")
 
 -- Extract JWT token from Authorization header or query parameters
-local token, token_source = auth_utils.extract_jwt_token()
+local token = auth_utils.extract_jwt_token()
 
 if not token then
     ngx.status = 401
     ngx.exit(401)
 end
 
--- If token was extracted from query parameters, remove them from the request
--- since no other query params are expected, we can safely clear all args
-if token_source == "query" then
-    ngx.req.set_uri_args({})
-end
+-- A token from the query string stays in the query string of the request:
+-- this is an auth_request subrequest, and its arguments are not the client
+-- request's. See AUTH_ACCEPT_QUERY_TOKEN.
 
 -- Get configuration values dynamically
 local requests_per_token = auth_config.get_requests_per_token()
