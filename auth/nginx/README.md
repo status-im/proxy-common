@@ -64,6 +64,7 @@ RUN opm install ledgetech/lua-resty-http
 env GO_AUTH_SERVICE_URL;
 env AUTH_CONFIG_FILE;
 env CUSTOM_DNS;
+env AUTH_RESOLVE_INTERVAL;
 env AUTH_ACCEPT_QUERY_TOKEN;
 
 http {
@@ -96,12 +97,15 @@ http {
 |----------|---------|---------|
 | `GO_AUTH_SERVICE_URL` | `http://auth-service:8081` | Auth service address |
 | `CUSTOM_DNS` | `127.0.0.11` (Docker) | DNS server the address is resolved with |
+| `AUTH_RESOLVE_INTERVAL` | `30` | Seconds between lookups of the address |
 | `AUTH_CONFIG_FILE` | `/app/auth_config.json` | The file the auth service runs with; `requests_per_token` and `token_expiry_minutes` are read from it |
 | `AUTH_ACCEPT_QUERY_TOKEN` | accepted | `false` refuses a token in `?token=`, `?jwt=` or `?access_token=` and takes it from `Authorization: Bearer` only |
 
-The auth service address is resolved in Lua, once, when a worker starts, and
-nginx then proxies to the IP. nginx's own `resolver` is deliberately not
-involved.
+The auth service address is resolved in Lua, when a worker starts and every
+`AUTH_RESOLVE_INTERVAL` seconds after that, and nginx proxies to the IP. So an
+auth service that starts after nginx, or comes back with another IP, is found
+without restarting nginx. A lookup that fails keeps the last IP found. nginx's
+own `resolver` is deliberately not involved.
 
 Switch `AUTH_ACCEPT_QUERY_TOKEN` off in a proxy that passes the query string
 on or caches by it: a query token stays in the query string of the request

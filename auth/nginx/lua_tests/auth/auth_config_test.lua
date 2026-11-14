@@ -2,7 +2,7 @@
 describe("auth_config", function()
     local auth_config
     local saved_ngx, saved_getenv, saved_resolver
-    local env, temp_files, resolved, dns_asked
+    local env, temp_files, resolved, dns_asked, resolve_timer
 
     -- Writes content to a temporary file and points AUTH_CONFIG_FILE at it
     local function with_config_file(content)
@@ -39,14 +39,21 @@ describe("auth_config", function()
     before_each(function()
         saved_ngx = _G.ngx
         saved_getenv = os.getenv
-        env, temp_files, resolved, dns_asked = {}, {}, nil, nil
+        env, temp_files, resolved, dns_asked, resolve_timer = {}, {}, nil, nil, nil
         env.AUTH_CONFIG_FILE = "/nonexistent/auth_config.json"
         os.getenv = function(name) return env[name] end
         _G.ngx = {
             ERR = "error", WARN = "warn", NOTICE = "notice",
             log = function() end,
             -- Runs the timer callback at once, the way nginx does at delay 0
-            timer = { at = function(_, callback) callback(false) return true end },
+            timer = {
+                at = function(_, callback) callback(false) return true end,
+                -- Kept for the test to fire: resolve_timer.tick()
+                every = function(interval, callback)
+                    resolve_timer = { interval = interval, tick = function() callback(false) end }
+                    return true
+                end,
+            },
         }
     end)
 
@@ -128,6 +135,66 @@ describe("auth_config", function()
             auth_config.init()
 
             assert.are.equal("http://172.18.0.4:9000", auth_config.get_go_auth_service_url())
+        end)
+    end)
+
+    describe("auth service address, looked up again on a timer", function()
+        before_each(function()
+            env.GO_AUTH_SERVICE_URL = "http://auth:9000"
+        end)
+
+        it("follows the auth service to its new IP", function()
+            resolved = "http://172.18.0.3:9000"
+            auth_config.init()
+
+            resolved = "http://172.18.0.4:9000"
+            resolve_timer.tick()
+
+            assert.are.equal("http://172.18.0.4:9000", auth_config.get_go_auth_service_url())
+        end)
+
+        it("keeps the last IP found when a lookup fails", function()
+            resolved = "http://172.18.0.3:9000"
+            auth_config.init()
+
+            resolved = nil
+            resolve_timer.tick()
+
+            assert.are.equal("http://172.18.0.3:9000", auth_config.get_go_auth_service_url())
+        end)
+
+        it("finds an auth service that came up after nginx", function()
+            auth_config.init()
+            assert.are.equal("http://auth:9000", auth_config.get_go_auth_service_url())
+
+            resolved = "http://172.18.0.3:9000"
+            resolve_timer.tick()
+
+            assert.are.equal("http://172.18.0.3:9000", auth_config.get_go_auth_service_url())
+        end)
+
+        it("runs every 30 seconds by default", function()
+            auth_config.init()
+
+            assert.are.equal(30, resolve_timer.interval)
+        end)
+
+        it("runs every AUTH_RESOLVE_INTERVAL seconds", function()
+            env.AUTH_RESOLVE_INTERVAL = "5"
+
+            auth_config.init()
+
+            assert.are.equal(5, resolve_timer.interval)
+        end)
+
+        it("falls back to 30 seconds for an interval that is not a positive number", function()
+            for _, value in ipairs({ "0", "-1", "soon" }) do
+                env.AUTH_RESOLVE_INTERVAL = value
+
+                auth_config.init()
+
+                assert.are.equal(30, resolve_timer.interval)
+            end
         end)
     end)
 
