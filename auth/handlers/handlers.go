@@ -134,6 +134,14 @@ func (h *Handlers) SolveHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Signed before the puzzle is claimed: a failure here must not use the
+	// puzzle up.
+	token, expiresAt, err := jwt.Generate(h.config.JWTSecret, req.Challenge, h.config.TokenExpiryMinutes, h.config.RequestsPerToken)
+	if err != nil {
+		http.Error(w, "failed to generate token", 500)
+		return
+	}
+
 	// Without this a client could solve one puzzle and keep asking for fresh
 	// tokens with it, each good for another RequestsPerToken requests.
 	if !h.solved.claim(req.Challenge, exp) {
@@ -144,13 +152,6 @@ func (h *Handlers) SolveHandler(w http.ResponseWriter, r *http.Request) {
 
 	h.metrics.RecordPuzzleAttempt("success")
 	h.metrics.IncrementPuzzlesSolved()
-
-	token, expiresAt, err := jwt.Generate(h.config.JWTSecret, req.Challenge, h.config.TokenExpiryMinutes, h.config.RequestsPerToken)
-	if err != nil {
-		http.Error(w, "failed to generate token", 500)
-		return
-	}
-
 	h.metrics.IncrementTokensIssued()
 
 	response := map[string]interface{}{
