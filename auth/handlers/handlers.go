@@ -20,6 +20,7 @@ type Handlers struct {
 	metrics    metrics.MetricsRecorder
 	tokenUsage map[string]int
 	tokenMutex sync.RWMutex
+	solved     *solvedPuzzles
 }
 
 type Option func(*Handlers)
@@ -35,6 +36,7 @@ func New(cfg *config.Config, opts ...Option) *Handlers {
 		config:     cfg,
 		metrics:    metrics.NewNoopMetrics(),
 		tokenUsage: make(map[string]int),
+		solved:     newSolvedPuzzles(),
 	}
 
 	for _, opt := range opts {
@@ -80,7 +82,10 @@ type SolveRequest struct {
 	ExpiresAt string `json:"expires_at"`
 }
 
-// SolveHandler handles HMAC protected solutions only
+// SolveHandler handles HMAC protected solutions only.
+//
+// A puzzle buys one token: a solution that was already exchanged for a token is
+// answered with 409, however many times it is sent again.
 func (h *Handlers) SolveHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
@@ -126,6 +131,14 @@ func (h *Handlers) SolveHandler(w http.ResponseWriter, r *http.Request) {
 	if !puzzle.ValidateHMACProtectedSolution(puzzleObj, solution, h.config.Argon2Params, h.config.JWTSecret) {
 		h.metrics.RecordPuzzleAttempt("invalid_solution")
 		http.Error(w, "invalid solution or HMAC verification failed", 400)
+		return
+	}
+
+	// Without this a client could solve one puzzle and keep asking for fresh
+	// tokens with it, each good for another RequestsPerToken requests.
+	if !h.solved.claim(req.Challenge, exp) {
+		h.metrics.RecordPuzzleAttempt("already_solved")
+		http.Error(w, "puzzle has already been solved", http.StatusConflict)
 		return
 	}
 
