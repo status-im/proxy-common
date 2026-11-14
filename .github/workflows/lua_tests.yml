@@ -1,0 +1,37 @@
+name: Lua Tests
+
+on:
+  push:
+    branches: [ master ]
+    paths:
+      - 'auth/nginx/**'
+  pull_request:
+    types: [opened, synchronize, reopened]
+    branches: [ master ]
+    paths:
+      - 'auth/nginx/**'
+
+jobs:
+  lua-tests:
+    name: Run Lua Tests
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+    - uses: actions/checkout@v6
+
+    - name: Install Lua and LuaRocks
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y lua5.4 lua5.4-dev luarocks
+
+    - name: Install Lua dependencies
+      run: |
+        sudo luarocks install busted
+        sudo luarocks install lua-cjson
+
+    - name: Run Lua tests
+      run: |
+        cd auth/nginx
+        ./lua_tests/run_busted_tests.sh
