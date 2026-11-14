@@ -2,6 +2,45 @@ local _M = {}
 local cjson = require "cjson"
 local resolver_utils = require "utils.resolver_utils"
 
+-- Seconds between lookups of the auth service address
+local DEFAULT_RESOLVE_INTERVAL = 30
+
+local function without_trailing_slash(url)
+    -- A trailing slash would change what proxy_pass sends
+    return (url:gsub("/$", ""))
+end
+
+local function configured_auth_service_url()
+    return os.getenv("GO_AUTH_SERVICE_URL") or "http://auth-service:8081"
+end
+
+-- Looks the auth service address up in Lua and remembers the answer. Runs when
+-- a worker starts and then on a timer: the auth service may come up after
+-- nginx, or come back with another IP.
+--
+-- A failed lookup leaves the address as it was. nginx proxies to an IP only
+-- (its own resolver is not involved), so the last IP found is worth more than
+-- the host name.
+function _M.resolve_auth_service(premature)
+    if premature then
+        return
+    end
+
+    local custom_dns = os.getenv("CUSTOM_DNS") or "127.0.0.11"  -- Docker DNS
+    local resolved_url, err = resolver_utils.resolve_url_with_custom_dns(configured_auth_service_url(), custom_dns)
+    if not resolved_url then
+        ngx.log(ngx.WARN, "auth_config: Failed to resolve auth service URL, keeping ",
+                _M.go_auth_service_url, ". Error: ", err or "unknown")
+        return
+    end
+
+    local url = without_trailing_slash(resolved_url)
+    if url ~= _M.go_auth_service_url then
+        ngx.log(ngx.NOTICE, "auth_config: Auth service is at ", url)
+    end
+    _M.go_auth_service_url = url
+end
+
 -- Configuration loading function that will be called by timer
 function _M.load_config(premature)
     if premature then
@@ -10,23 +49,8 @@ function _M.load_config(premature)
     
     -- Use provided config file path or fallback
     local config_path = os.getenv("AUTH_CONFIG_FILE") or "/app/auth_config.json"
-    
-    -- Get Go Auth Service URL from environment variable
-    local base_auth_url = os.getenv("GO_AUTH_SERVICE_URL") or "http://auth-service:8081"
-    
-    -- Try to resolve auth-service URL using custom DNS if available
-    local custom_dns = os.getenv("CUSTOM_DNS") or "127.0.0.11"  -- Docker DNS
-    local resolved_url, err = resolver_utils.resolve_url_with_custom_dns(base_auth_url, custom_dns)
-    
-    -- Remove trailing slash to fix proxy_pass behavior
-    local final_url = (resolved_url or base_auth_url):gsub("/$", "")
-    _M.go_auth_service_url = final_url
-    
-    if resolved_url then
-        ngx.log(ngx.NOTICE, "auth_config: Successfully resolved auth service URL")
-    else
-        ngx.log(ngx.WARN, "auth_config: Failed to resolve auth service URL, using fallback. Error: ", err or "unknown")
-    end
+
+    _M.resolve_auth_service()
 
     -- Read and parse JSON config file
     local config_data = _M.read_json_config(config_path)
@@ -64,9 +88,7 @@ function _M.init()
     _M.accept_query_token = not is_off(os.getenv("AUTH_ACCEPT_QUERY_TOKEN"))
 
     -- Set default values immediately to prevent race conditions
-    -- Remove trailing slash to fix proxy_pass behavior
-    local default_url = os.getenv("GO_AUTH_SERVICE_URL") or "http://auth-service:8081"
-    _M.go_auth_service_url = default_url:gsub("/$", "")
+    _M.go_auth_service_url = without_trailing_slash(configured_auth_service_url())
     _M.requests_per_token = 100
     _M.token_expiry_minutes = 10
     
@@ -74,6 +96,16 @@ function _M.init()
     local ok, err = ngx.timer.at(0, _M.load_config)
     if not ok then
         ngx.log(ngx.ERR, "auth_config: Failed to create timer: ", err)
+    end
+
+    -- Keep looking the auth service address up
+    local interval = tonumber(os.getenv("AUTH_RESOLVE_INTERVAL")) or DEFAULT_RESOLVE_INTERVAL
+    if interval <= 0 then
+        interval = DEFAULT_RESOLVE_INTERVAL
+    end
+    ok, err = ngx.timer.every(interval, _M.resolve_auth_service)
+    if not ok then
+        ngx.log(ngx.ERR, "auth_config: Failed to create the resolve timer: ", err)
     end
 end
 
