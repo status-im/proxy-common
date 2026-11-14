@@ -15,7 +15,9 @@ PORT=8081 ./server
 ```
 
 ### 2. **Configure Nginx**
-Add authentication sections to your nginx configuration:
+Add authentication sections to your nginx configuration. This is the simplest
+form, which asks the service about every request; [nginx/](nginx/README.md)
+has the OpenResty module the Status proxies use, which asks once per token.
 
 ```nginx
 location /auth {
@@ -185,7 +187,8 @@ This will:
 ## 📋 **API Endpoints**
 
 - `GET /auth/puzzle` - Get proof-of-work challenge
-- `POST /auth/solve` - Submit puzzle solution
+- `POST /auth/solve` - Submit puzzle solution. A puzzle buys one token: a
+  solution that was already exchanged for a token gets `409`
 - `POST /auth/verify` - Verify JWT token (for nginx)
 - `GET /auth/status` - Service health status
 - `GET /dev/test-solve` - Generate test solution (development only)
