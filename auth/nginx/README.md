@@ -6,7 +6,7 @@ once per request. Shared by eth-rpc-proxy, nft-proxy and market-proxy.
 
 ```
 auth/nginx/
-├── conf/auth_locations.conf     # /auth/, /_auth_token, /_auth_go_verify
+├── conf/auth_locations.conf     # /auth/, /auth/solve, /_auth_token, /_auth_go_verify
 ├── lua/auth/
 │   ├── auth_token_validator.lua # content handler of /_auth_token
 │   ├── token_limit.lua          # the answer for a usage count
@@ -45,6 +45,9 @@ sequenceDiagram
 - **An auth service failure is not a bad token.** A 5xx or a timeout on verify
   (2s to connect, 5s to answer) is passed on as a server error. A `401` would
   make the client throw a good token away.
+- **Answers to a puzzle are rate limited.** `/auth/solve` takes 10 requests a
+  second per client with a burst of 20 (`429` beyond that): a wrong answer to
+  a real puzzle costs the auth service one Argon2 run.
 - **In memory of one nginx.** With several nginx replicas the limit applies
   per replica.
 
@@ -70,6 +73,9 @@ env AUTH_ACCEPT_QUERY_TOKEN;
 http {
     lua_package_path "/usr/local/openresty/nginx/lua/?.lua;/usr/local/openresty/lualib/?.lua;;";
     lua_shared_dict jwt_tokens 10m;
+    # /auth/solve is limited by this zone. Behind a load balancer key it by
+    # the client address the balancer passes on, not by the balancer's own.
+    limit_req_zone $binary_remote_addr zone=auth_solve:10m rate=10r/s;
 
     init_worker_by_lua_block {
         require("auth.auth_config").init()
@@ -84,6 +90,13 @@ http {
             auth_basic           "Restricted";
             auth_basic_user_file /etc/nginx/.htpasswd;
             auth_request         /_auth_token;
+
+            # Without these the client never sees how much of the token is left:
+            # the validator answers a subrequest
+            auth_request_set $auth_ratelimit_limit     $sent_http_x_ratelimit_limit;
+            auth_request_set $auth_ratelimit_remaining $sent_http_x_ratelimit_remaining;
+            add_header X-RateLimit-Limit     $auth_ratelimit_limit always;
+            add_header X-RateLimit-Remaining $auth_ratelimit_remaining always;
 
             proxy_pass http://backend;
         }
@@ -114,6 +127,7 @@ after it is checked, so it would reach the backend and end up in cache keys.
 ## Tests
 
 ```bash
+# OpenResty runs LuaJIT, which is Lua 5.1: CI runs the tests on 5.1
 luarocks install busted
 luarocks install lua-cjson
 ./lua_tests/run_busted_tests.sh

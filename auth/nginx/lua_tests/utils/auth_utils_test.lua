@@ -105,6 +105,21 @@ describe("auth_utils", function()
             assert.is_nil(auth_utils.extract_jwt_token())
         end)
 
+        it("ignores a parameter without a value", function()
+            -- nginx parses `?token` and `?token=` as token = true
+            for _, uri in ipairs({ "/v1/prices?token", "/v1/prices?token=" }) do
+                request({ args = { token = true }, request_uri = uri })
+
+                assert.is_nil(auth_utils.extract_jwt_token())
+            end
+        end)
+
+        it("takes the next parameter when one has no value", function()
+            request({ args = { token = true, jwt = "abc.def.ghi" } })
+
+            assert.are.same({ "abc.def.ghi", "query" }, { auth_utils.extract_jwt_token() })
+        end)
+
         it("returns nothing when query tokens are switched off", function()
             accept_query_token = false
             request({ args = { token = "abc.def.ghi" }, request_uri = "/v1/prices?token=abc.def.ghi" })

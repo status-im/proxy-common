@@ -60,7 +60,6 @@ describe("auth_token_validator", function()
                 __newindex = function(_, k, v) current.headers[k] = v end,
                 __index = function(_, k) return current.headers[k] end,
             }),
-            req = { set_uri_args = function() end },
             location = {
                 capture = function()
                     go_calls = go_calls + 1

@@ -2,6 +2,12 @@ local auth_config = require("auth.auth_config")
 
 local _M = {}
 
+-- JWT tokens are typically < 2KB
+local MAX_TOKEN_LENGTH = 4096
+
+-- Query parameters a token is taken from, in this order
+local QUERY_TOKEN_PARAMETERS = { "token", "jwt", "access_token" }
+
 -- Extract JWT token from various sources (Authorization header or query parameter)
 function _M.extract_jwt_token()
     -- First, try to get token from Authorization header (existing behavior)
@@ -9,8 +15,8 @@ function _M.extract_jwt_token()
     if auth_header then
         local auth_type, token = auth_header:match("^(%S+)%s+(.+)$")
         if auth_type == "Bearer" and token then
-            -- Validate token length to prevent memory issues (JWT tokens are typically < 2KB)
-            if #token > 4096 then
+            -- Validate token length to prevent memory issues
+            if #token > MAX_TOKEN_LENGTH then
                 ngx.log(ngx.WARN, "Token too long, rejecting: ", #token, " bytes")
                 return nil, nil
             end
@@ -48,36 +54,20 @@ function _M.extract_jwt_token()
         end
     end
     
-    -- Check for 'token' parameter
-    if args.token then
-        -- Validate token length to prevent memory issues
-        if #args.token > 4096 then
-            ngx.log(ngx.WARN, "Query token too long, rejecting: ", #args.token, " bytes")
-            return nil, nil
+    -- 'access_token' is the common OAuth2 name
+    for _, name in ipairs(QUERY_TOKEN_PARAMETERS) do
+        local value = args[name]
+        -- A parameter without a value is `true`, a repeated one is a table
+        if type(value) == "string" then
+            -- Validate token length to prevent memory issues
+            if #value > MAX_TOKEN_LENGTH then
+                ngx.log(ngx.WARN, "Query ", name, " too long, rejecting: ", #value, " bytes")
+                return nil, nil
+            end
+            return value, "query"
         end
-        return args.token, "query"
     end
-    
-    -- Check for 'jwt' parameter  
-    if args.jwt then
-        -- Validate token length to prevent memory issues
-        if #args.jwt > 4096 then
-            ngx.log(ngx.WARN, "Query JWT too long, rejecting: ", #args.jwt, " bytes")
-            return nil, nil
-        end
-        return args.jwt, "query"
-    end
-    
-    -- Check for 'access_token' parameter (common OAuth2 pattern)
-    if args.access_token then
-        -- Validate token length to prevent memory issues
-        if #args.access_token > 4096 then
-            ngx.log(ngx.WARN, "Query access_token too long, rejecting: ", #args.access_token, " bytes")
-            return nil, nil
-        end
-        return args.access_token, "query"
-    end
-    
+
     return nil, nil
 end
 
