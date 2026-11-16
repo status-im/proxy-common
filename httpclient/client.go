@@ -113,8 +113,27 @@ func (c *HTTPClientWithRetries) ExecuteRequest(req *http.Request) (*http.Respons
 		return resp, responseBody, requestDuration, nil
 	}
 
-	return nil, nil, 0, fmt.Errorf("all %d attempts failed, last error: %v",
+	if lastErr == nil {
+		return nil, nil, 0, fmt.Errorf("all %d attempts failed", c.Opts.MaxRetries)
+	}
+	// Wrapped, so the status of the last answer is still there for errors.As
+	return nil, nil, 0, fmt.Errorf("all %d attempts failed, last error: %w",
 		c.Opts.MaxRetries, lastErr)
+}
+
+// StatusError is the error ExecuteRequest returns when the server answered
+// with a status other than 200. It carries that status and the body the
+// server sent, so a caller can pass a refusal on instead of hiding it.
+type StatusError struct {
+	StatusCode int
+	Body       []byte
+	message    string
+}
+
+func (e *StatusError) Error() string { return e.message }
+
+func newStatusError(resp *http.Response, body []byte, format string, args ...interface{}) *StatusError {
+	return &StatusError{StatusCode: resp.StatusCode, Body: body, message: fmt.Sprintf(format, args...)}
 }
 
 // processResponse reads and processes the HTTP response
@@ -126,7 +145,7 @@ func processResponse(resp *http.Response, req *http.Request, requestDuration tim
 			retryAfter := resp.Header.Get("Retry-After")
 			log.Printf("rate limit exceeded (status %d), retry after %s: %s",
 				resp.StatusCode, retryAfter, string(body))
-			return nil, fmt.Errorf("rate limit exceeded (status %d), retry after %s: %s",
+			return nil, newStatusError(resp, body, "rate limit exceeded (status %d), retry after %s: %s",
 				resp.StatusCode, retryAfter, string(body))
 		}
 
@@ -139,11 +158,11 @@ func processResponse(resp *http.Response, req *http.Request, requestDuration tim
 			log.Printf("API request failed with status %d after %.2fs (URL length: %d): %s",
 				resp.StatusCode, requestDuration.Seconds(), urlLength, string(body))
 
-			return nil, fmt.Errorf("API request failed with status %d after %.2fs (URL length: %d): %s",
+			return nil, newStatusError(resp, body, "API request failed with status %d after %.2fs (URL length: %d): %s",
 				resp.StatusCode, requestDuration.Seconds(), urlLength, string(body))
 		}
 
-		return nil, fmt.Errorf("API request failed with status %d after %.2fs: %s",
+		return nil, newStatusError(resp, body, "API request failed with status %d after %.2fs: %s",
 			resp.StatusCode, requestDuration.Seconds(), string(body))
 	}
 
