@@ -330,3 +330,56 @@ func TestHTTPClientWithRetries_NoHandler(t *testing.T) {
 		t.Errorf("Expected body '{\"status\":\"ok\"}', got '%s'", string(body))
 	}
 }
+
+// A refusal comes back as a StatusError with the status and body the server sent
+func TestHTTPClientWithRetries_StatusError(t *testing.T) {
+	calls := 0
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		calls++
+		if r.URL.Path == "/bad" {
+			w.WriteHeader(http.StatusBadRequest)
+			_, _ = w.Write([]byte(`{"error":"owner is required"}`))
+			return
+		}
+		w.WriteHeader(http.StatusServiceUnavailable)
+		_, _ = w.Write([]byte("down"))
+	}))
+	defer server.Close()
+
+	opts := DefaultRetryOptions()
+	opts.MaxRetries = 2
+	opts.BaseBackoff = time.Millisecond
+	client := NewHTTPClientWithRetries(opts, NewMockHttpStatusHandler(), nil)
+
+	t.Run("NotRetried", func(t *testing.T) {
+		calls = 0
+		req, _ := http.NewRequest("GET", server.URL+"/bad", nil)
+		_, _, _, err := client.ExecuteRequest(req)
+		var statusErr *StatusError
+		if !errors.As(err, &statusErr) {
+			t.Fatalf("Expected a StatusError, got %v", err)
+		}
+		if statusErr.StatusCode != http.StatusBadRequest || string(statusErr.Body) != `{"error":"owner is required"}` {
+			t.Errorf("Got status %d, body %q", statusErr.StatusCode, statusErr.Body)
+		}
+		if calls != 1 {
+			t.Errorf("Expected 1 request, got %d", calls)
+		}
+	})
+
+	t.Run("AfterRetries", func(t *testing.T) {
+		calls = 0
+		req, _ := http.NewRequest("GET", server.URL+"/down", nil)
+		_, _, _, err := client.ExecuteRequest(req)
+		var statusErr *StatusError
+		if !errors.As(err, &statusErr) {
+			t.Fatalf("Expected a StatusError, got %v", err)
+		}
+		if statusErr.StatusCode != http.StatusServiceUnavailable {
+			t.Errorf("Got status %d", statusErr.StatusCode)
+		}
+		if calls != 2 {
+			t.Errorf("Expected 2 requests, got %d", calls)
+		}
+	})
+}
